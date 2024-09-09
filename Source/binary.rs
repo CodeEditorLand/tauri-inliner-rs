@@ -3,12 +3,12 @@ use kuchiki::NodeRef;
 use std::{collections::HashMap, path::PathBuf};
 
 pub fn inline_base64(
-	mut cache: &mut HashMap<String, Option<String>>,
-	config: &super::Config,
-	root_path: &PathBuf,
-	document: &NodeRef,
+  mut cache: &mut HashMap<String, Option<String>>,
+  config: &super::Config,
+  root_path: &PathBuf,
+  document: &NodeRef,
 ) -> crate::Result<()> {
-	for target in document
+  for target in document
     .select(r#"video, img, link[rel=icon], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="apple-touch-startup-image"]"#)
     .unwrap()
   {
@@ -28,5 +28,5 @@ pub fn inline_base64(
     }
   }
 
-	Ok(())
+  Ok(())
 }
