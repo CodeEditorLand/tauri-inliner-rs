@@ -53,35 +53,21 @@ impl Default for Config {
 }
 
 fn content_type_map() -> &'static serde_json::Value {
-	static MAP:Lazy<serde_json::Value> = Lazy::new(|| {
-		serde_json::from_str(include_str!("./content-type.json")).unwrap()
-	});
+	static MAP:Lazy<serde_json::Value> =
+		Lazy::new(|| serde_json::from_str(include_str!("./content-type.json")).unwrap());
 	&MAP
 }
 
-fn load_path<P:AsRef<Path>>(
-	path:&str,
-	config:&Config,
-	root_path:P,
-) -> Result<Option<String>> {
-	if !config.inline_fonts && FONT_EXTENSIONS.iter().any(|f| path.ends_with(f))
-	{
-		log::debug!(
-			"[INLINER] `{}` is a font and config.inline_fonts == false",
-			path
-		);
+fn load_path<P:AsRef<Path>>(path:&str, config:&Config, root_path:P) -> Result<Option<String>> {
+	if !config.inline_fonts && FONT_EXTENSIONS.iter().any(|f| path.ends_with(f)) {
+		log::debug!("[INLINER] `{}` is a font and config.inline_fonts == false", path);
 		return Ok(None);
 	}
 
 	let raw = if let Ok(url) = Url::parse(path) {
 		if config.inline_remote {
-			let response = reqwest::blocking::Client::builder()
-				.build()?
-				.get(url)
-				.send()?;
-			if let Some(content_type) =
-				response.headers().get(reqwest::header::CONTENT_TYPE)
-			{
+			let response = reqwest::blocking::Client::builder().build()?.get(url).send()?;
+			if let Some(content_type) = response.headers().get(reqwest::header::CONTENT_TYPE) {
 				let content_type = content_type.to_str().unwrap();
 				if let Some(extension) = path.split('.').last() {
 					let expected_content_type = content_type_map()
@@ -90,8 +76,8 @@ fn load_path<P:AsRef<Path>>(
 						.unwrap_or_else(|| content_type.to_string());
 					if content_type != expected_content_type {
 						log::debug!(
-							"[INLINER] `{}` response's content type is \
-							 invalid; expected {} but got {}",
+							"[INLINER] `{}` response's content type is invalid; expected {} but \
+							 got {}",
 							path,
 							expected_content_type,
 							content_type,
@@ -102,11 +88,7 @@ fn load_path<P:AsRef<Path>>(
 			}
 			Some(response.bytes()?.as_ref().to_vec())
 		} else {
-			log::debug!(
-				"[INLINER] `{}` is a remote URL and config.inline_remote == \
-				 false",
-				path
-			);
+			log::debug!("[INLINER] `{}` is a remote URL and config.inline_remote == false", path);
 			None
 		}
 	} else {
@@ -116,30 +98,22 @@ fn load_path<P:AsRef<Path>>(
 		} else {
 			root_path.as_ref().to_path_buf().join(file_path)
 		};
-		log::debug!(
-			"[INLINER] loading `{:?}` with fs::read `{:?}`",
-			file_path,
-			path
-		);
+		log::debug!("[INLINER] loading `{:?}` with fs::read `{:?}`", file_path, path);
 		fs::read(file_path).map(|file| Some(file.to_vec()))?
 	};
 	let res = if let Some(raw) = raw {
 		if raw.len() > config.max_inline_size {
 			log::debug!(
-				"[INLINER] `{}` is greater than the max inline size and will \
-				 not be inlined",
+				"[INLINER] `{}` is greater than the max inline size and will not be inlined",
 				path
 			);
 			None
 		} else {
 			Some(match path.split('.').last() {
 				Some(extension) => {
-					if let Some(content_type) =
-						content_type_map().get(extension)
-					{
+					if let Some(content_type) = content_type_map().get(extension) {
 						log::debug!(
-							"[INLINER] encoding `{}` as base64 with content \
-							 type `{}`",
+							"[INLINER] encoding `{}` as base64 with content type `{}`",
 							path,
 							content_type.as_str().unwrap()
 						);
@@ -198,10 +172,7 @@ pub(crate) fn get<P:AsRef<Path>>(
 /// * `file_path` - The path of the html file.
 /// * `config` - Pass a config file to select what features to enable. Use
 ///   `Default::default()` to enable everything
-pub fn inline_file<P:AsRef<Path>>(
-	file_path:P,
-	config:Config,
-) -> Result<String> {
+pub fn inline_file<P:AsRef<Path>>(file_path:P, config:Config) -> Result<String> {
 	let html = fs::read_to_string(&file_path)?;
 	inline_html_string(&html, &file_path.as_ref().parent().unwrap(), config)
 }
@@ -215,11 +186,7 @@ pub fn inline_file<P:AsRef<Path>>(
 ///   with, usually this is the folder the html file is in.
 /// * `config` - Pass a config file to select what features to enable. Use
 ///   `Default::default()` to enable everything
-pub fn inline_html_string<P:AsRef<Path>>(
-	html:&str,
-	root_path:P,
-	config:Config,
-) -> Result<String> {
+pub fn inline_html_string<P:AsRef<Path>>(html:&str, root_path:P, config:Config) -> Result<String> {
 	let mut cache = HashMap::new();
 	let root_path = root_path.as_ref().canonicalize().unwrap();
 	let document = kuchiki::parse_html().one(html);
@@ -244,13 +211,7 @@ mod tests {
 	};
 
 	use dissimilar::{diff, Chunk};
-	use termcolor::{
-		Color,
-		ColorChoice,
-		ColorSpec,
-		StandardStream,
-		WriteColor,
-	};
+	use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 	use tiny_http::{Header, Response, Server, StatusCode};
 
 	#[test]
@@ -263,40 +224,29 @@ mod tests {
 		spawn(move || {
 			let server = Server::http("localhost:54321").unwrap();
 			for request in server.incoming_requests() {
-				let requested =
-					percent_encoding::percent_decode_str(request.url())
-						.decode_utf8_lossy()
-						.to_string();
-				let url:PathBuf =
-					requested.chars().skip(1).collect::<String>().into();
+				let requested = percent_encoding::percent_decode_str(request.url())
+					.decode_utf8_lossy()
+					.to_string();
+				let url:PathBuf = requested.chars().skip(1).collect::<String>().into();
 				let file_path = fixtures_path.join(url);
 				if let Ok(contents) = read(&file_path) {
 					let mut response = Response::from_data(contents);
 					let content_type = super::content_type_map()
 						.get(file_path.extension().unwrap().to_str().unwrap())
 						.map(|c| c.to_string())
-						.unwrap_or_else(|| {
-							"application/octet-stream".to_string()
-						});
+						.unwrap_or_else(|| "application/octet-stream".to_string());
 					response.add_header(
-						Header::from_bytes(
-							&b"Content-Type"[..],
-							&content_type.as_bytes()[..],
-						)
-						.unwrap(),
+						Header::from_bytes(&b"Content-Type"[..], &content_type.as_bytes()[..])
+							.unwrap(),
 					);
 					request.respond(response).unwrap();
 				} else {
-					request
-						.respond(Response::empty(StatusCode::from(404)))
-						.unwrap();
+					request.respond(Response::empty(StatusCode::from(404))).unwrap();
 				}
 			}
 		});
 
-		for file in
-			std::fs::read_dir(root.join(PathBuf::from("src/fixtures"))).unwrap()
-		{
+		for file in std::fs::read_dir(root.join(PathBuf::from("src/fixtures"))).unwrap() {
 			let path = file.unwrap().path();
 			let file_name = path.file_name().unwrap().to_str().unwrap();
 			if !file_name.ends_with(".src.html") {
@@ -306,9 +256,7 @@ mod tests {
 			let output = super::inline_file(&path, Default::default()).unwrap();
 
 			let expected = read_to_string(
-				path.parent()
-					.unwrap()
-					.join(file_name.replace(".src.html", ".result.html")),
+				path.parent().unwrap().join(file_name.replace(".src.html", ".result.html")),
 			)
 			.unwrap();
 
@@ -320,10 +268,7 @@ mod tests {
 
 			if not_equal {
 				_print_diff(output, expected);
-				panic!(
-					"test case `{}` failed",
-					file_name.replace(".src.html", "")
-				);
+				panic!("test case `{}` failed", file_name.replace(".src.html", ""));
 			}
 		}
 	}
@@ -342,21 +287,14 @@ mod tests {
 				Chunk::Insert(x) => {
 					match difference[i - 1] {
 						Chunk::Delete(ref y) => {
-							stdout
-								.set_color(
-									ColorSpec::new().set_fg(Some(Color::Green)),
-								)
-								.unwrap();
+							stdout.set_color(ColorSpec::new().set_fg(Some(Color::Green))).unwrap();
 							write!(stdout, "+").unwrap();
 							let diffs = diff(y, x);
 							for c in diffs {
 								match c {
 									Chunk::Equal(z) => {
 										stdout
-											.set_color(
-												ColorSpec::new()
-													.set_fg(Some(Color::Green)),
-											)
+											.set_color(ColorSpec::new().set_fg(Some(Color::Green)))
 											.unwrap();
 										write!(stdout, "{}", z).unwrap();
 										write!(stdout, " ").unwrap();
@@ -379,19 +317,13 @@ mod tests {
 							writeln!(stdout).unwrap();
 						},
 						_ => {
-							stdout
-								.set_color(
-									ColorSpec::new().set_fg(Some(Color::Green)),
-								)
-								.unwrap();
+							stdout.set_color(ColorSpec::new().set_fg(Some(Color::Green))).unwrap();
 							writeln!(stdout, "+{}", x).unwrap();
 						},
 					};
 				},
 				Chunk::Delete(x) => {
-					stdout
-						.set_color(ColorSpec::new().set_fg(Some(Color::Red)))
-						.unwrap();
+					stdout.set_color(ColorSpec::new().set_fg(Some(Color::Red))).unwrap();
 					writeln!(stdout, "-{}", x).unwrap();
 				},
 			}
