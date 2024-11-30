@@ -14,12 +14,14 @@ pub fn inline_script_link(
 	document:&NodeRef,
 ) -> crate::Result<()> {
 	let mut targets = vec![];
+
 	for target in document.select("script, style, link, *:not(svg)[style]").unwrap() {
 		targets.push(target);
 	}
 
 	for target in targets {
 		let node = target.as_node();
+
 		let element = node.as_element().unwrap();
 
 		match element.name.local.to_string().as_str() {
@@ -41,9 +43,11 @@ pub fn inline_script_link(
 							QualName::new(None, ns!(html), "script".into()),
 							None,
 						);
+
 						replacement_node.append(NodeRef::new_text(script));
 
 						node.insert_after(replacement_node);
+
 						node.detach();
 					}
 				} else {
@@ -52,6 +56,7 @@ pub fn inline_script_link(
 			},
 			"style" => {
 				let css = node.text_contents();
+
 				match inline_css(
 					&mut cache,
 					Some(css),
@@ -65,9 +70,11 @@ pub fn inline_script_link(
 								QualName::new(None, ns!(html), "style".into()),
 								None,
 							);
+
 							replacement_node.append(NodeRef::new_text(css));
 
 							node.insert_after(replacement_node);
+
 							node.detach();
 						}
 					},
@@ -77,6 +84,7 @@ pub fn inline_script_link(
 			"link" => {
 				let css_path = {
 					let text_attr = element.attributes.borrow_mut();
+
 					let out = if let Some(c) = text_attr
 						.get("rel")
 						.filter(|rel| *rel == "stylesheet")
@@ -86,6 +94,7 @@ pub fn inline_script_link(
 					} else {
 						continue;
 					};
+
 					out
 				};
 
@@ -96,9 +105,11 @@ pub fn inline_script_link(
 								QualName::new(None, ns!(html), "style".into()),
 								None,
 							);
+
 							replacement_node.append(NodeRef::new_text(css));
 
 							node.insert_after(replacement_node);
+
 							node.detach();
 						}
 					},
@@ -107,8 +118,10 @@ pub fn inline_script_link(
 			},
 			_ => {
 				let mut attrs = element.attributes.borrow_mut();
+
 				if let Some(style) = attrs.get("style") {
 					log::debug!("[INLINER] inlining style on {}", node.to_string());
+
 					match inline_css(
 						&mut cache,
 						Some(style.to_string()),
@@ -137,6 +150,7 @@ fn inline_css_path<P:AsRef<Path>>(
 	root_path:P,
 ) -> crate::Result<Option<String>> {
 	let css = crate::get(&mut cache, css_path, &config, &root_path)?;
+
 	inline_css(&mut cache, css, css_path, &config, &root_path)
 }
 
@@ -156,8 +170,10 @@ fn inline_css<P:AsRef<Path>>(
 
 	let css_data = css.map(|resolved_css| {
 		let resolved_css = comment_remover.replace_all(&resolved_css, |_:&Captures| "".to_owned());
+
 		let resolved_css = import_finder.replace_all(&resolved_css, |caps:&Captures| {
 			let match_url = caps[2].trim().to_string();
+
 			let match_url = if match_url.starts_with("url") {
 				match_url.replace("url", "")
 			} else {
@@ -169,16 +185,21 @@ fn inline_css<P:AsRef<Path>>(
 			.replace("(", "")
 			.replace(")", "")
 			.replace(";", "");
+
 			let mut match_split = match_url.split(' ');
+
 			let css_url = match_split.next().unwrap();
+
 			let url_path = if let Ok(url) = url::Url::parse(&css_path) {
 				url.join(&css_url).unwrap().to_string()
 			} else {
 				root_path.as_ref().join(&css_url).into_os_string().into_string().unwrap()
 			};
+
 			match inline_css_path(&mut cache, &url_path, &config, root_path.as_ref()) {
 				Ok(out) => {
 					let inlined_css = out.map(compress_css).unwrap_or_else(|| "".to_owned());
+
 					if match_split.next().is_some() {
 						format!(
 							"@media {}{{{}}}",
@@ -200,6 +221,7 @@ fn inline_css<P:AsRef<Path>>(
 			if caps[1].trim().starts_with("data:") {
 				return caps[0].to_owned();
 			}
+
 			let url_path = if let Ok(url) = url::Url::parse(&css_path) {
 				url.join(&caps[1]).unwrap().to_string()
 			} else if let Ok(url) = url::Url::parse(&caps[1]) {
@@ -213,6 +235,7 @@ fn inline_css<P:AsRef<Path>>(
 					.into_string()
 					.unwrap()
 			};
+
 			if let Ok(Some(resolved)) = crate::get(&mut cache, &url_path, &config, &root_path) {
 				format!(
 					"url('{}')",
@@ -222,6 +245,7 @@ fn inline_css<P:AsRef<Path>>(
 				format!("url('{}')", &caps[1])
 			}
 		});
+
 		compress_css(resolved_css)
 	});
 
@@ -230,6 +254,7 @@ fn inline_css<P:AsRef<Path>>(
 
 fn compress_css<S:Into<String>>(css:S) -> String {
 	let mut css = css.into();
+
 	let replaces = &[
 		(regex::Regex::new(r"(\s+)").unwrap(), " "),
 		(regex::Regex::new(r":(\s+)").unwrap(), ":"),
@@ -239,8 +264,10 @@ fn compress_css<S:Into<String>>(css:S) -> String {
 		(regex::Regex::new(r"(; )").unwrap(), ";"),
 		(regex::Regex::new(r"(\n+)").unwrap(), ""),
 	];
+
 	for (regex, replace) in replaces {
 		css = regex.replace_all(&css, replace.to_string().as_str()).to_string();
 	}
+
 	css
 }
