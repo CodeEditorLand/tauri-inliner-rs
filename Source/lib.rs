@@ -236,10 +236,8 @@ mod tests {
 		thread::spawn,
 	};
 
-	use dissimilar::{diff, Chunk};
-
+	use dissimilar::{Chunk, diff};
 	use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-
 	use tiny_http::{Header, Response, Server, StatusCode};
 
 	#[test]
