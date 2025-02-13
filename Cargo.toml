@@ -3,31 +3,31 @@ name = "tauri-inliner"
 version = "0.0.1"
 description = "A library to inline HTML assets."
 readme = "README.md"
-license-file = "LICENSE"
-authors = ["Lucas Nogueira <lucas@tauri.studio>"]
+license = "MIT"
+authors = [ "Lucas Nogueira <lucas@tauri.studio>" ]
 repository = "https://github.com/tauri-apps/tauri-inliner-rs"
 homepage = "https://github.com/tauri-apps/tauri-inliner-rs"
-keywords = ["tauri", "web", "inline", "html", "assets"]
-categories = ["web-programming"]
+keywords = [ "tauri", "web", "inline", "html", "assets" ]
+categories = [ "web-programming" ]
 edition = "2018"
-exclude = ["src/fixtures"]
+exclude = [ "src/fixtures" ]
 
 [dependencies]
-thiserror = { version = "1.0" }
-serde_json = { version = "1.0" }
-once_cell = { version = "1.5" }
-regex = { version = "1.4" }
-base64 = { version = "0.13" }
-kuchiki = { version = "0.8" }
-html5ever = { version = "0.25" }
-url = { version = "2.2" }
-reqwest = { version = "0.11", features = ["blocking"] }
-log = { version = "0.4" }
-derive_more = { version = "0.99" }
+thiserror = "1.0"
+serde_json = "1.0"
+once_cell = "1.5"
+regex = "1.4"
+base64 = "0.13"
+kuchiki = "0.8"
+html5ever = "0.25"
+url = "2.2"
+reqwest = { version = "0.11", features = [ "blocking" ] }
+log = "0.4"
+derive_more = "0.99"
 
 [dev-dependencies]
-tiny_http = { version = "0.8" }
+tiny_http = "0.8"
 percent-encoding = "2.1"
-env_logger = { version = "0.8" }
-dissimilar = { version = "1.0" }
-termcolor = { version = "1.1" }
+env_logger = "0.8"
+dissimilar = "1.0"
+termcolor = "1.1"
